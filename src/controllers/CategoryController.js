@@ -37,4 +37,51 @@ export class CategoryController {
       return res.status(statusCode).json({ message: error.message });
     }
   }
+
+  async findById(req, res) {
+    try {
+      const { id } = req.params;
+      const category = await CategoryRepository.findById(id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      return res.status(200).json(category);
+    } catch (error) {
+      console.log(error);
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message });
+    }
+  }
+
+  async update(req, res) {
+    try {
+      const { id } = req.params;
+      const category = await CategoryRepository.findById(id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      const updatedCategory = await CategoryRepository.update(id, req.body);
+      return res.status(200).json(updatedCategory);
+    } catch (error) {
+      console.log(error);
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message });
+    }
+  }
+
+  async delete(req, res) {
+    try {
+      const { id } = req.params;
+      const category = await CategoryRepository.findById(id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      await CategoryRepository.delete(id);
+      return res.status(200).json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.log(error);
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({ message: error.message });
+    }
+  }
 }

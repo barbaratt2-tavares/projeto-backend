@@ -2,6 +2,7 @@ import express from "express";
 import userRoutes from "./routes/UserRoutes";
 import sequelize from "./database";
 import categoryRoutes from "./routes/CategoryRoutes";
+import productRoutes from "./routes/ProductRoutes";
 
 const app = express();
 app.use(express.json());
@@ -12,6 +13,7 @@ app.get("/", (req, res) => {
 
 app.use("/user", userRoutes);
 app.use("/category", categoryRoutes);
+app.use("/product", productRoutes);
 
 async function startServer() {
   try {
