@@ -11,9 +11,9 @@ app.get("/", (req, res) => {
   res.send("ok");
 });
 
-app.use("/user", userRoutes);
-app.use("/category", categoryRoutes);
-app.use("/product", productRoutes);
+app.use("/v1/user", userRoutes);
+app.use("/v1/category", categoryRoutes);
+app.use("/v1/product", productRoutes);
 
 async function startServer() {
   try {

@@ -2,11 +2,12 @@ import { Router } from "express";
 import { validateSchema } from "../middlewares/ValidateSchemaMiddleware";
 import { createCategorySchema } from "../requests/CreateCategoryRequest";
 import { CategoryController } from "../controllers/CategoryController";
+import { verifyToken } from "../middlewares/AuthMiddleware";
 
 const categoryRoutes = Router();
 const categoryController = new CategoryController();
 
-categoryRoutes.post("/", validateSchema(createCategorySchema), (req, res) =>
+categoryRoutes.post("/", verifyToken, validateSchema(createCategorySchema), (req, res) =>
   categoryController.create(req, res),
 );
 
@@ -14,10 +15,10 @@ categoryRoutes.get("/search", (req, res) =>
   categoryController.findAll(req, res),
 );
 categoryRoutes.get("/:id", (req, res) => categoryController.findById(req, res));
-categoryRoutes.put("/:id", validateSchema(createCategorySchema), (req, res) =>
+categoryRoutes.put("/:id", verifyToken, validateSchema(createCategorySchema), (req, res) =>
   categoryController.update(req, res),
 );
-categoryRoutes.delete("/:id", (req, res) =>
+categoryRoutes.delete("/:id", verifyToken, (req, res) =>
   categoryController.delete(req, res),
 );
 
