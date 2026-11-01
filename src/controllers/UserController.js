@@ -73,7 +73,7 @@ export class UserController {
       if (!deletedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      return res.status(200).json({ message: "User deleted successfully" });
+      return res.status(204).json({ message: "User deleted successfully" });
     } catch (error) {
       console.log(error);
       const statusCode = error.statusCode || 500;

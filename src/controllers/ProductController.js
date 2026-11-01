@@ -88,7 +88,7 @@ export class ProductController {
         return res.status(404).json({ message: "Product not found" });
       }
       await ProductRepository.delete(id);
-      return res.status(200).json({ message: "Product deleted successfully" });
+      return res.status(204).json({ message: "Product deleted successfully" });
     } catch (error) {
       console.log(error);
       const statusCode = error.statusCode || 500;

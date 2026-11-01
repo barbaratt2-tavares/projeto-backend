@@ -1,8 +1,56 @@
 const Product = require("../models/Product");
+const ProductCategory = require("../models/ProductCategory");
+const ProductImage = require("../models/ProductImage");
+const ProductOption = require("../models/ProductOption");
 
 class ProductRepository {
   async create(data) {
-    return await Product.create(data);
+    const { category_ids, images, options, ...productData } = data;
+
+    const transaction = await Product.sequelize.transaction();
+
+    try {
+      const product = await Product.create(productData, { transaction });
+
+      if (images && Array.isArray(images) && images.length > 0) {
+        const imageRecords = images.map((image) => ({
+          ...image,
+          product_id: product.id,
+        }));
+        await ProductImage.bulkCreate(imageRecords, { transaction });
+      }
+
+      if (options && Array.isArray(options) && options.length > 0) {
+        const optionRecords = options.map((option) => {
+          const { values, ...rest } = option;
+          return {
+            ...rest,
+            value: option.value || values,
+            product_id: product.id,
+          };
+        });
+        await ProductOption.bulkCreate(optionRecords, { transaction });
+      }
+
+      if (
+        category_ids &&
+        Array.isArray(category_ids) &&
+        category_ids.length > 0
+      ) {
+        const categoryRecords = category_ids.map((categoryId) => ({
+          product_id: product.id,
+          category_id: categoryId,
+        }));
+        await ProductCategory.bulkCreate(categoryRecords, { transaction });
+      }
+
+      await transaction.commit();
+
+      return await this.findById(product.id);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   async findAll({
@@ -31,7 +79,7 @@ class ProductRepository {
 
     if (category_ids) {
       const catIds = category_ids.split(",").map((id) => Number(id.trim()));
-      queryOptions.where.category_id = { [Op.in]: catIds }; // Adjust column name if it's different in your model (e.g., categoryId)
+      queryOptions.where.category_id = { [Op.in]: catIds };
     }
 
     if (priceRange) {
@@ -70,17 +118,123 @@ class ProductRepository {
   }
 
   async findById(id) {
-    return await Product.findByPk(id);
+    const product = await Product.findByPk(id, {
+      include: [
+        {
+          model: ProductCategory,
+          as: "categories",
+          attributes: ["category_id"],
+        },
+        {
+          model: ProductImage,
+          as: "images",
+          attributes: ["id", "content", "type"],
+        },
+        {
+          model: ProductOption,
+          as: "options",
+        },
+      ],
+    });
+
+    if (!product) return null;
+
+    const plainProduct = product.get({ plain: true });
+
+    return {
+      id: plainProduct.id,
+      enabled: plainProduct.enabled,
+      name: plainProduct.name,
+      slug: plainProduct.slug,
+      stock: plainProduct.stock,
+      description: plainProduct.description,
+      price: plainProduct.price,
+      price_with_discount: plainProduct.price_with_discount,
+      category_ids: plainProduct.categories
+        ? plainProduct.categories.map((cat) => cat.category_id || cat.id)
+        : [],
+      images: plainProduct.images || [],
+      options: plainProduct.options || [],
+    };
   }
 
   async update(id, data) {
     const product = await Product.findByPk(id);
-    return await product.update(data);
+    if (!product) return null;
+
+    const { category_ids, images, options, ...productData } = data;
+    const transaction = await Product.sequelize.transaction();
+
+    try {
+      await product.update(productData, { transaction });
+
+      if (images !== undefined) {
+        await ProductImage.destroy({ where: { product_id: id }, transaction });
+        if (Array.isArray(images) && images.length > 0) {
+          const imageRecords = images.map((image) => ({
+            ...image,
+            product_id: id,
+          }));
+          await ProductImage.bulkCreate(imageRecords, { transaction });
+        }
+      }
+
+      if (options !== undefined) {
+        await ProductOption.destroy({ where: { product_id: id }, transaction });
+        if (Array.isArray(options) && options.length > 0) {
+          const optionRecords = options.map((option) => {
+            const { values, ...rest } = option;
+            return {
+              ...rest,
+              value: option.value || values,
+              product_id: id,
+            };
+          });
+          await ProductOption.bulkCreate(optionRecords, { transaction });
+        }
+      }
+
+      if (category_ids !== undefined) {
+        await ProductCategory.destroy({
+          where: { product_id: id },
+          transaction,
+        });
+        if (Array.isArray(category_ids) && category_ids.length > 0) {
+          const categoryRecords = category_ids.map((categoryId) => ({
+            product_id: id,
+            category_id: categoryId,
+          }));
+          await ProductCategory.bulkCreate(categoryRecords, { transaction });
+        }
+      }
+
+      await transaction.commit();
+
+      return await this.findById(id);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   async delete(id) {
     const product = await Product.findByPk(id);
-    await product.destroy();
+    if (!product) return null;
+
+    const transaction = await Product.sequelize.transaction();
+
+    try {
+      await ProductImage.destroy({ where: { product_id: id }, transaction });
+      await ProductOption.destroy({ where: { product_id: id }, transaction });
+
+      await product.destroy({ transaction });
+
+      await transaction.commit();
+      return true;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 }
 

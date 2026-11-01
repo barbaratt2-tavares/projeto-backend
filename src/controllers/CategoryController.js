@@ -77,7 +77,7 @@ export class CategoryController {
         return res.status(404).json({ message: "Category not found" });
       }
       await CategoryRepository.delete(id);
-      return res.status(200).json({ message: "Category deleted successfully" });
+      return res.status(204).json({ message: "Category deleted successfully" });
     } catch (error) {
       console.log(error);
       const statusCode = error.statusCode || 500;
